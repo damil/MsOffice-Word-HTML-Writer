@@ -2,9 +2,10 @@ package MsOffice::Word::HTML::Writer;
 
 use warnings;
 use strict;
-use MIME::QuotedPrint;
+use MIME::QuotedPrint qw/encode_qp/;
+use MIME::Base64      qw/encode_base64/;
+use MIME::Types;
 use Carp;
-
 our $VERSION = '0.01';
 
 sub new {
@@ -29,13 +30,13 @@ sub new {
 }
 
 
-sub new_section {
+sub break_section {
   my ($self, %params) = @_;
 
   # check parameters
   my @bad = grep {$_ !~ /^(header|footer|first_header|first_footer|new_page)$/}
                  keys %params;
-  croak "new_section : bad parameter: " . join(", ", @bad) if @bad;
+  croak "break_section : bad parameter: " . join(", ", @bad) if @bad;
 
   # if first automatic section if empty, delete it
   $self->{sections} = []
@@ -56,7 +57,7 @@ sub write {
 
 
 
-sub new_page {
+sub break_page {
   my ($self, $html) = @_;
 
   $self->{sections}[-1]{content} 
@@ -76,17 +77,28 @@ sub save_as {
     or croak "could not open >$filename: $!";
 
   # write content and close
-  print $fh $self->MIME_content;
+  print $fh $self->content;
   close $fh;
 }
 
 
+sub attach {
+  my ($self, $name, $open1, $open2, @other) = @_;
 
-sub add_MIME_part {
-  my ($self, $name, $content) = @_;
+  # open a handle to the attachment (need to dispatch according to number
+  # of args, because perlfunc/open() has complex prototyping behaviour)
+  my $fh;
+  if (@other)    { open $fh, $open1, $open2, @other or die $!; }
+  elsif ($open2) { open $fh, $open1, $open2         or die $!; }
+  else           { open $fh, $open1                 or die $!; }
 
-  # add an attachment (filename and content)
-  push @{$self->{MIME_parts}}, ["files/$name", $content];
+  # slurp the content
+  binmode($fh);
+  local $/;
+  my $attachment = <$fh>;
+
+  # add the attachment (filename and content)
+  push @{$self->{MIME_parts}}, ["files/$name", $attachment];
 }
 
 
@@ -112,7 +124,7 @@ sub field {
 
 
 
-sub MIME_content {
+sub content {
   my ($self) = @_;
 
   # separator for parts in MIME document
@@ -129,11 +141,16 @@ sub MIME_content {
   my $filelist = $self->_filelist(@parts);
   for my $pair ($self->_main, @parts, $filelist) {
     my ($filename, $content) = @$pair;
+    my $mime_type = MIME::Types->new->mimeTypeOf($filename);
+    my ($encoding, $encode_sub) 
+      = $mime_type =~ /^text|xml$/ ? ('quoted-printable', \&encode_qp    )
+                                   : ('base64',           \&encode_base64);
+
     $mime .= qq{--$boundary\n}
           .  qq{Content-Location: file:///C:/foo/$filename\n}
-          .  qq{Content-Transfer-Encoding: quoted-printable\n}
-          .  qq{Content-Type: text/html\n\n}
-          .  encode_qp($content) 
+          .  qq{Content-Transfer-Encoding: $encoding\n}
+          .  qq{Content-Type: $mime_type\n\n}
+          .  $encode_sub->($content) 
           . "\n";
   }
 
@@ -318,7 +335,7 @@ MsOffice::Word::HTML::Writer - Writing documents for MsWord in HTML format
   
   $doc->write("<p>hello, world</p>");
   
-  $doc->new_section(
+  $doc->break_section(
     header => sprintf("Section 2, page %s of %s", 
                                   $doc->field('PAGE'), 
                                   $doc->field('NUMPAGES')),
@@ -327,7 +344,10 @@ MsOffice::Word::HTML::Writer - Writing documents for MsWord in HTML format
     new_page => 1,
   );
   $doc->write("this is the second section, look at header/footer");
-  
+
+  $doc->attach("my_image.gif", $path_to_my_image);
+  $doc->write("<img src='files/my_image.gif'>");
+
   $doc->save_as("c:/tmp/my_doc");
 
 =head1 DESCRIPTION
@@ -440,13 +460,13 @@ a string containing CSS style definitions for headers and footers
 
 Adds some HTML into the document body.
 
-=head2 new_page
+=head2 break_page
 
 Inserts a page break.
 
-=head2 new_section
+=head2 break_section
 
-    $doc->new_section(%params);
+    $doc->break_section(%params);
 
 Opens a new section within the document.  Each section in a document
 can have independent pagination (margins, columns, headers and
@@ -489,12 +509,12 @@ If no extension is present, file extension F<.doc> will be added
 by default.
 
 
-=head2 MIME_content
+=head2 content
 
 Returns the whole MIME-encoded document as a single string.
 Useful if you don't want to save the document into a file, but 
 want to do something else like embedding it in a message
-or a ZIP file.
+or a ZIP file, or returning it as an HTTP response.
 
 
 =head2 field
@@ -513,14 +533,19 @@ Here are some examples :
                  doc->field(CREATEDATE => '\\@ "d MM yyyy"'),
                  doc->field(PRINTDATE  => '\\@ "dddd d MMMM yyyy" \\* Upper');
 
-=head2 add_MIME_part
+=head2 attach
 
-  $doc->add_MIME_part($name, $content);
+  $doc->attach($localname, $filename);
+  $doc->attach($localname, "<", \$content);
+  $doc->attach($localname, "<&", $filehandle);
 
-Adds a part in the MIME file, under name C<files/$name>,
-with content C<$content>. 
+Adds an attachment into the document; the attachment will be encoded
+as a MIME part and will be accessible under C<files/$localname>.
 
-
+The remaining arguments to C<attach> specify the source of the attachment;
+they are directly passed to L<perlfunc/open> and therefore have the same
+API flexibility : you can specify a filename, a reference to a memory
+variable, a reference to another filehandle, etc.
 
 
 =head1 TO DO
@@ -528,7 +553,6 @@ with content C<$content>.
 This is still exploratory; many features need to be added. 
 For example:
 
-  - embeddings (images, files, objects)
   - headers/footers for odd/even pages
   - link same header/footers across several sections
   - section formatting (margins, page size, columns, etc)
