@@ -1,5 +1,8 @@
 Revision history for MsOffice-Word-HTML-Writer
 
-0.01 02.11.2008
+0.02 01.01.2009
+  - Oops, already some bugs (bad calls to Params::Validate)
+
+0.01 01.01.2009
   - Initial release
 
