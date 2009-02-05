@@ -6,7 +6,9 @@ WriteMakefile
           'VERSION_FROM' => 'lib/MsOffice/Word/HTML/Writer.pm',
           'PREREQ_PM' => {
                            'Carp' => 0,
+                           'MIME::Base64' => 0,
                            'MIME::QuotedPrint' => 0,
+                           'MIME::Types' => 0,
                            'Module::Build' => 0,
                            'Params::Validate' => 0,
                            'Test::More' => 0

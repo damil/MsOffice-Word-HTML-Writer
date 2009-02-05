@@ -1,5 +1,8 @@
 Revision history for MsOffice-Word-HTML-Writer
 
+0.03 05.01.2009
+  - forgot Mime::Types in prereq
+
 0.02 01.01.2009
   - Oops, already some bugs (bad calls to Params::Validate)
 

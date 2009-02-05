@@ -9,7 +9,7 @@ use Carp;
 use Params::Validate qw/validate SCALAR HASHREF/;
 
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 
 sub new {
@@ -66,7 +66,7 @@ sub save_as {
   my ($self, $filename) = @_;
 
   # default extension is ".doc"
-  $filename .= ".doc" unless $filename =~ /[^\/\\]+\.\w+$/;
+  $filename .= ".doc" unless $filename =~ /\.\w{1,5}$/;
 
   # open the file
   open my $fh, ">", $filename

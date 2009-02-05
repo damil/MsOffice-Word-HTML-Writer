@@ -32,6 +32,8 @@ $doc->create_section(
 $doc->write(<<"");
    <p style='margin-left:-2.0cm'>HELLO, WORLD</P>
    <P>THIS IS A GENERATED DOC</P>
+   <p>prions d&#8217;agréer, Monsieur</p>
+
 
 # $doc->write(filigrane());
 
