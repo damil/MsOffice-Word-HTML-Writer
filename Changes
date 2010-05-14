@@ -1,5 +1,8 @@
 Revision history for MsOffice-Word-HTML-Writer
 
+0.05 14.05.2010
+  - better handling of MsWord fields, and new method quote()
+
 0.04 04.06.2009
   - fixes on CRLF line endings when generating from Unix
 

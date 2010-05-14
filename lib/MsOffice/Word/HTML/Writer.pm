@@ -9,7 +9,7 @@ use Carp;
 use Params::Validate qw/validate SCALAR HASHREF/;
 
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 
 sub new {
@@ -113,24 +113,46 @@ sub page_break {
 }
 
 
+sub tab {
+  my ($self, $n_tabs) = @_;
+  $n_tabs ||= 1;
+  return qq{<span style='mso-tab-count:$n_tabs'></span>};
+}
+
 sub field {
-  my ($self, $fieldname, $args) = @_;
+  my ($self, $fieldname, $args, $content) = @_;
+
+  for ($args, $content) {
+    $_ ||= "";                              # undef replaced by empty string
+    s/&/&amp;/g,  s/</&lt;/g, s/>/&gt;/g;   # replace HTML entities
+  }
 
   my $field;
 
   # when args : long form of field encoding
   if ($args) {
-      $field = qq{<span style='mso-element:field-begin'></span>}
-             . "$fieldname $args"
-             . qq{<span style='mso-element:field-separator'></span>}
-             . qq{<span style='mso-element:field-end'></span>};
+    my $space = qq{<span style='mso-spacerun:yes'> </span>};
+    $field = qq{<span style='mso-element:field-begin'></span>}
+           . $space . $fieldname . $space . $args
+           . qq{<span style='mso-element:field-separator'></span>}
+           . $content
+           . qq{<span style='mso-element:field-end'></span>};
   }
   # otherwise : short form of field encoding
   else {
-    $field = qq{<span style='mso-field-code:" $fieldname "'></span>};
+    $field = qq{<span style='mso-field-code:"$fieldname"'>$content</span>};
   }
 
   return $field;
+}
+
+sub quote {
+  my ($self, $text) = @_;
+  my $args = $text;
+  $args =~ s/"/\\"/g;
+  $args = qq{"$args"};
+  $args =~ s/"/&quot;/g;
+  return $self->field('QUOTE', $args, $text);
 }
 
 
@@ -619,15 +641,30 @@ returning it as an HTTP response.
 
 Returns HTML markup for encoding a page break.
 
+=head2 tab
+
+  my $html = $doc->tab($n_tabs);
+
+Returns HTML markup for encoding one or several tabs. If C<$n_tab> is
+omitted, it defaults to 1.
+
 
 =head2 field
 
-  my $html = $doc->field($fieldname, $args); 
+  my $html = $doc->field($fieldname, $args, $content);
 
 Returns HTML markup for a MsWord field.
+
 Optional C<$args> is a string with arguments or flags for
-the field. See MsWord help documentation for the list of 
-field names and their associated arguments or flags. 
+the field. See MsWord help documentation for the list of
+field names and their associated arguments or flags.
+
+Optional C<$content> is the initial displayed content for the
+field (because unfortunately MsWord does not immediately compute
+the field content when opening the document; users will have
+to explicitly request to update all fields, by selecting the whole
+document and then hitting the F9 key).
+
 Here are some examples :
 
   my $header = sprintf "%s of %s", $doc->field('PAGE'), 
@@ -635,8 +672,13 @@ Here are some examples :
   my $footer = sprintf "created at %s, printed at %s", 
                  doc->field(CREATEDATE => '\\@ "d MM yyyy"'),
                  doc->field(PRINTDATE  => '\\@ "dddd d MMMM yyyy" \\* Upper');
+  my $quoted = $doc->field('QUOTE', '"hello, world"', 'hello, world');
 
+=head2 quote
 
+  my $html = $doc->quote($text);
+
+Shortcut to produce a QUOTE field (see last field example just above).
 
 
 =head1 AUTHORING MHT DOCUMENTS
