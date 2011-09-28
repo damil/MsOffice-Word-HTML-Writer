@@ -9,9 +9,7 @@ my $doc = MsOffice::Word::HTML::Writer->new(
  );
 
 
-use File::Slurp;
-my $img = read_file("ecuge.png", binmode => ":raw");
-$doc->add_MIME_part("ecuge.png" => $img);
+$doc->attach("ecuge.png" => "ecuge.png");
 
 
 $doc->write(<<"");

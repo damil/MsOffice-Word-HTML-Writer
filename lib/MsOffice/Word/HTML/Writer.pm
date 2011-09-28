@@ -9,7 +9,7 @@ use Carp;
 use Params::Validate qw/validate SCALAR HASHREF/;
 
 
-our $VERSION = '0.07';
+our $VERSION = '1.00';
 
 
 sub new {
@@ -234,6 +234,7 @@ sub _main {
     = qq{<html xmlns:v="urn:schemas-microsoft-com:vml"\n}
     . qq{      xmlns:o="urn:schemas-microsoft-com:office:office"\n}
     . qq{      xmlns:w="urn:schemas-microsoft-com:office:word"\n}
+    . qq{      xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"\n}
     . qq{      xmlns="http://www.w3.org/TR/REC-html40">\n}
     . $self->_head
     . qq{<body>\n$body</body>\n}
@@ -250,7 +251,6 @@ sub _head {
     = qq{<head>\n}
     . qq{<link rel=File-List href="files/filelist.xml">\n}
     . qq{<title>$self->{title}</title>\n}
-#    . qq{<xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml>\n}
     . $self->_xml_WordDocument
     . qq{<style>\n} . $self->_section_styles . qq{</style>\n}
     . $self->{head}
@@ -435,13 +435,17 @@ MsOffice::Word::HTML::Writer - Writing documents for MsWord in HTML format
 
 =head1 DESCRIPTION
 
+=head2 Goal
+
 The present module is one way to programatically generate documents
 targeted for Microsoft Word (MsWord). It doesn't need
 MsWord to be installed, and doesn't even require a Win32 machine
 (which is why it is not in the C<Win32> namespace).
 
-MsWord can read documents encoded in native binary format, in Rich
-Text Format (RTF), in WordML (an XML dialect), or -- maybe this is
+=head2 MsWord and HTML
+
+MsWord can read documents encoded in old native binary format, in Rich
+Text Format (RTF), in XML (either ODF or OOXML), or -- maybe this is
 less known -- in HTML, with some special markup for pagination and
 other MsWord-specific features. Such HTML documents are often in
 several parts, because attachments like images or headers/footers need
@@ -457,10 +461,11 @@ reopen in MsWord : when clicking on such documents, Windows
 chooses Internet Explorer as the default display program.
 However, these documents can be simply renamed with a
 F<.doc> extension, and will then open directly in MsWord.
-By the way, the same can be done with WordML or RTF documents.
+By the way, the same can be done with XML or RTF documents.
 That is to say, MsWord is able to recognize the internal
-format of a file, without any dependency on the 
-filename.
+format of a file, without any dependency on the filename.
+
+=head2 Features of the module
 
 C<MsOffice::Word::HTML::Writer> helps you to programatically generate
 MsWord documents in MHT format. The advantage of this technique is
@@ -471,6 +476,7 @@ of C<MsOffice::Word::HTML::Writer> is to help building the
 MIME multipart file, and provide some abstractions for 
 representing MsWord-specific features (headers, footers, fields, etc.).
 
+=head2 Advantages of MHT format
 
 The MHT format is probably the most convenient
 way for programmatic document generation, because
@@ -479,48 +485,68 @@ way for programmatic document generation, because
 
 =item *
 
-unlike Excel, MsWord native binary format is unpublished and therefore
-cannot be generated without the MsWord executable.
+unlike Excel, MsWord native binary format (used in versions up to 2003)
+is unpublished and therefore cannot be generated without the MsWord executable.
 
 =item *
 
 remote control of the MsWord program through an OLE connection,
 as in L<Win32::Word::Writer|Win32::Word::Writer>, requires a
 local installation of Microsoft Office, and is not well
-suited for servers because the MsWord program might hang
+suited for server-side generation because the MsWord program might hang
 or might open dialog boxes that require user input.
 
 =item *
 
 generation of documents in RTF is possible, but 
-requires deep knowledge of the RTF structure
+authoring the models requires deep knowledge of the RTF structure
 --- see L<RTF::Writer>.
 
 =item *
 
-generation of documents in "WordML" also requires
-deep knowledge of WordML structure.
+authoring models in XML also requires
+deep knowledge of the XML structure.
+
+Instead of working directly at the XML level, one could use the
+L<OpenOffice::OODoc> distribution on CPAN, which provides programmatic
+access to the "ODF" XML format used by OpenOffice. MsWord is able to
+read and produce such ODF files, but this is not fully satisfactory
+because in that mode many MsWord features are disabled or restricted.
+
+The XML format used by MsWord is called "OOXML"; to
+my knowledge, there is no CPAN module providing an API to 
+this format.
+
 
 =back
 
 By contrast, C<MsOffice::Word::HTML::Writer> allows you to 
 produce documents even with little knowledge of MsWord.
-One word of warning, however : opening MHT documents in MsWord is
-slower than native binary or RTF documents, because MsWord needs to
-parse the HTML, compute the layout and convert it into its internal
-representation.  Therefore MHT format is not recommended for large
-documents.
+Besides, since the content is in HTML, it can be assembled
+with any HTML tool, and therefore also requires little knowledge
+of Perl.
 
-B<Note> : this first release of C<MsOffice::Word::HTML::Writer>
-is still in an exploratory phase; the programming interface
-may change in future versions.
+One word of warning, however : opening MHT documents in MsWord is
+a bit slower than native binary or RTF documents, because MsWord needs to
+parse the HTML, compute the layout and convert it into its internal
+representation.  Therefore MHT format is not recommended for very
+large documents.
+
+=head2 Usage
+
+C<MsOffice::Word::HTML::Writer> is used in production
+at Geneva courts of law, for generating thousands of documents
+per day, from hundreds of models, with an architecture of 
+reusable document parts implemented by Template Toolkit mechanisms
+(macros, blocks and views).
+
 
 =head1 METHODS
 
 B<General convention> : method names that start
 with a I<verb> may change the internal state of the 
 writer object (for example L</write>, L</create_section>);
-method names that are nouns return data without modifying
+method names that are I<nouns> return data without modifying
 the internal state (for example L</field>, L</content>, L<page_break>).
 
 
@@ -901,7 +927,7 @@ a generic letter template :
             footer => view.footer()
          );
          CALL msword.write(view.body());
-       END write_body; %]
+       END; # BLOCK write_body
     
        BLOCK body;
          view.letter_head();
@@ -949,12 +975,9 @@ from the generic letter and overrides the C<letter_body> block :
      advertisement.main() UNLESS component.caller %]
 
 
-
-
 =head1 TO DO
 
-This module is still exploratory; many features need to be added.
-For example:
+Many features could be added; for example:
 
   - odd/even pages
   - link same header/footers across several sections
@@ -1008,7 +1031,8 @@ L<http://search.cpan.org/dist/MsOffice-Word-HTML-Writer>
 
 =head1 SEE ALSO
 
-L<Win32::Word::Writer>, L<RTF::Writer>, L<Spreadsheet::WriteExcel>.
+L<Win32::Word::Writer>, L<RTF::Writer>, L<Spreadsheet::WriteExcel>,
+L<OpenOffice::OODoc>.
 
 
 =head1 COPYRIGHT & LICENSE
