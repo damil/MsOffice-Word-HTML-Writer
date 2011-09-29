@@ -9,7 +9,7 @@ use Carp;
 use Params::Validate qw/validate SCALAR HASHREF/;
 
 
-our $VERSION = '1.00';
+our $VERSION = '1.01';
 
 
 sub new {
@@ -112,8 +112,9 @@ sub attach {
 
 
 sub page_break {
-  my ($self) = @_;
-  return qq{<br clear='all' style='page-break-before:always'>\n};
+  my ($self, $break) = @_;
+  $break ||= 'always';
+  return qq{<br clear='all' style='page-break-before:$break'>\n};
 }
 
 
@@ -218,7 +219,13 @@ sub _main {
 
     # section break
     if ($i > 1) {
-      my $break = $section->{new_page} ? 'always' : 'auto';
+      # type of break
+      my $break = $section->{new_page};
+      $break = 'always' if $break && $break !~ /\w/; # if true but not a word
+      $break ||= 'auto';                             # if false
+      # otherwise, type of break will just be the word given in {new_page}
+
+      # insert into body
       my $style = qq{page-break-before:$break;mso-break-type:section-break};
       $body .= qq{<br clear=all style='$style'>\n};
     }
@@ -424,7 +431,7 @@ MsOffice::Word::HTML::Writer - Writing documents for MsWord in HTML format
                                   $doc->field('NUMPAGES')),
     footer => sprintf("printed at %s", 
                                   $doc->field('PRINTDATE')),
-    new_page => 1,
+    new_page => 1, # or 'left', or 'right'
   );
   $doc->write("this is the second section, look at header/footer");
   
@@ -631,7 +638,7 @@ variable, a reference to another filehandle, etc.
                                   $doc->field('NUMPAGES')),
     footer => sprintf("printed at %s", 
                                   $doc->field('PRINTDATE')),
-    new_page => 1,
+    new_page => 1, # or 'left', or 'right'
   );
 
 Opens a new section within the document
@@ -689,6 +696,9 @@ Footer content for the first page.
 =item new_page
 
 If true, a page break will be inserted before the new section.
+If the argument is the word C<'left'> or C<'right'>, one or two
+page breaks will be inserted so that the next page is formatted
+as a left (right) page.
 
 =back
 
@@ -714,7 +724,14 @@ returning it as an HTTP response.
 
 =head2 page_break
 
+  my $html = $doc->page_break;
+  my $html = $doc->page_break('left');
+  my $html = $doc->page_break('right');
+
 Returns HTML markup for encoding a page break.
+If an argument C<'left'> or C<'right'> is given, one or two
+page breaks will be inserted so that the next page is formatted
+as a left (right) page.
 
 =head2 tab
 
