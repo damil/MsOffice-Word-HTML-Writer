@@ -1,5 +1,7 @@
 Revision history for MsOffice-Word-HTML-Writer
 
+  - avoid warnings when the MIME type is unknown
+
 1.01 29.09.2011
   - new 'left'/'right' args for page_break() and create_section(new_page=>)
 

@@ -178,7 +178,7 @@ sub content {
   my $filelist = $self->_filelist(@parts);
   for my $pair ($self->_main, @parts, $filelist) {
     my ($filename, $content) = @$pair;
-    my $mime_type = MIME::Types->new->mimeTypeOf($filename);
+    my $mime_type = MIME::Types->new->mimeTypeOf($filename) || '';
     my ($encoding, $encoded);
     if ($mime_type =~ /^text|xml$/) {
       $encoding = 'quoted-printable';
