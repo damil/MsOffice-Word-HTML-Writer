@@ -8,7 +8,7 @@ my $doc = MsOffice::Word::HTML::Writer->new(
   title => "My new doc",
  );
 
-$doc->new_section(
+$doc->create_section(
   first_header => sprintf("<P>THIS IS THE FIRST HEADER</P>, page %s of %s at %s</P>",
                            $doc->field('PAGE'),
                            $doc->field('NUMPAGES') ,
@@ -28,7 +28,7 @@ $doc->write(<<"");
    <P>THIS IS A GENERATED DOC</P>
 
 
-$doc->new_page;
+$doc->page_break;
 
 $doc->write(<<"");
    <p>Page two here</p>
@@ -36,3 +36,4 @@ $doc->write(<<"");
 
 $doc->save_as("foo");
 
+system "start foo.doc";

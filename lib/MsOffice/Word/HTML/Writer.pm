@@ -6,11 +6,9 @@ use MIME::QuotedPrint qw/encode_qp/;
 use MIME::Base64      qw/encode_base64/;
 use MIME::Types;
 use Carp;
-use Params::Validate qw/validate SCALAR HASHREF/;
+use Params::Validate  qw/validate SCALAR HASHREF/;
 
-
-our $VERSION = '1.01';
-
+our $VERSION = '1.02';
 
 sub new {
   my $class = shift;
@@ -307,7 +305,8 @@ sub _section_styles {
 
     # headers and footers 
     my $has_first_page;
-    foreach my $prop (qw/header_margin footer_margin/) {
+    foreach my $prop (qw/header_margin footer_margin
+                         page_numbers paper_source/) {
       my $val = $section->{page}{$prop} or next;
       (my $property = $prop) =~ s/_/-/g;
       $properties .= qq{  mso-$property:$val;\n};
@@ -424,8 +423,10 @@ MsOffice::Word::HTML::Writer - Writing documents for MsWord in HTML format
               "<p>hello from another page</p>");
   
   $doc->create_section(
-    page => {size   => "21.0cm 29.7cm",
-             margin => "1.2cm 2.4cm 2.3cm 2.4cm"},
+    page => {size         => "21.0cm 29.7cm",
+             margin       => "1.2cm 2.4cm 2.3cm 2.4cm",
+             page_numbers => 50, # initial page number within this section
+            },
     header => sprintf("Section 2, page %s of %s", 
                                   $doc->field('PAGE'), 
                                   $doc->field('NUMPAGES')),
@@ -674,6 +675,17 @@ Margin for header
 
 Margin for footer
 
+=item page_numbers
+
+Initial value for page numbers within this section
+
+=item paper_source
+
+Parameters for paper source within this section
+(values for these parameters must be reverse engineered from MsWord HTML 
+output)
+
+
 =back
 
 
@@ -866,7 +878,7 @@ the various parts :
 
 Now let's look at a different architecture: the client code
 calls the Template toolkit, which in turn calls
-C<MsOffice::Word::HTML::Writer>. 
+C<MsOffice::Word::HTML::Writer>.
 
 The most common way to call modules from TT is to use
 a I<TT plugin>; but since there is currently 
@@ -966,15 +978,15 @@ This is quite similar to an object-oriented class : assignments
 within the view are like object attributes (i.e. the C<title>
 variable), and blocks within the view are like methods.
 
-After the end of the view, we call the C<main> method, but 
+After the end of the view, we call the C<main> method, but
 only if that view was called directly from client code.
-If the view is inherited, as displayed below, then the 
+If the view is inherited, as displayed below, then the
 call to C<main> will be from the subview.
 
 Now we can define a specific letter template that inherits
 from the generic letter and overrides the C<letter_body> block :
 
-  [% PROCESS generic_letter.tt2; # loads the parent view 
+  [% PROCESS generic_letter.tt2; # loads the parent view
   
      VIEW advertisement;
   
@@ -996,11 +1008,10 @@ from the generic letter and overrides the C<letter_body> block :
 
 Many features could be added; for example:
 
-  - odd/even pages
   - link same header/footers across several sections
   - multiple columns
-  - watermarks (I tried hard to reverse engineer MsWord behaviour, 
-    but it still doesn't work ... couldn't figure out all details 
+  - watermarks (I tried hard to reverse engineer MsWord behaviour,
+    but it still doesn't work ... couldn't figure out all details
     of VML markup)
 
 Contributions welcome!
