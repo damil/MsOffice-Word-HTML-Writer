@@ -28,12 +28,17 @@ $doc->write(<<"");
    <P>THIS IS A GENERATED DOC</P>
 
 
-$doc->page_break;
+my $txt = "this <b>is</b> an <em>April 1<sup>st</sup> joke</em>";
+$doc->write("$txt<br><br>");
+$doc->write($doc->quote($txt, 'true'));
+
+
+$doc->write($doc->page_break);
 
 $doc->write(<<"");
    <p>Page two here</p>
 
 
-$doc->save_as("foo");
+my $file = $doc->save_as("foo");
 
-system "start foo.doc";
+system "start $file";

@@ -8,7 +8,7 @@ use MIME::Types;
 use Carp;
 use Params::Validate  qw/validate SCALAR HASHREF/;
 
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 
 sub new {
   my $class = shift;
@@ -77,6 +77,8 @@ sub save_as {
   # write content and close
   print $fh $self->content;
   close $fh;
+
+  return $filename;
 }
 
 
@@ -123,11 +125,12 @@ sub tab {
 }
 
 sub field {
-  my ($self, $fieldname, $args, $content) = @_;
+  my ($self, $fieldname, $args, $content, $prevent_html_entity_encoding) = @_;
 
   for ($args, $content) {
     $_ ||= "";                              # undef replaced by empty string
-    s/&/&amp;/g,  s/</&lt;/g, s/>/&gt;/g;   # replace HTML entities
+    s/&/&amp;/g,  s/</&lt;/g, s/>/&gt;/g   # replace HTML entities
+      unless $prevent_html_entity_encoding;
   }
 
   my $field;
@@ -150,12 +153,12 @@ sub field {
 }
 
 sub quote {
-  my ($self, $text) = @_;
+  my ($self, $text, $prevent_html_entity_encoding) = @_;
   my $args = $text;
   $args =~ s/"/\\"/g;
   $args = qq{"$args"};
   $args =~ s/"/&quot;/g;
-  return $self->field('QUOTE', $args, $text);
+  return $self->field('QUOTE', $args, $text, $prevent_html_entity_encoding);
 }
 
 
@@ -439,7 +442,7 @@ MsOffice::Word::HTML::Writer - Writing documents for MsWord in HTML format
   $doc->attach("my_image.gif", $path_to_my_image);
   $doc->write("<img src='files/my_image.gif'>");
   
-  $doc->save_as("/path/to/some/file");
+  my $filename = $doc->save_as("/path/to/some/file");
 
 =head1 DESCRIPTION
 
@@ -464,14 +467,21 @@ single file encoded in MIME multipart format. This format can be
 generated interactively from MsWord by calling the "SaveAs" menu and
 choosing the F<.mht> extension.
 
-Documents saved with a F<.mht> extension will not directly 
-reopen in MsWord : when clicking on such documents, Windows
-chooses Internet Explorer as the default display program.
-However, these documents can be simply renamed with a
-F<.doc> extension, and will then open directly in MsWord.
-By the way, the same can be done with XML or RTF documents.
-That is to say, MsWord is able to recognize the internal
-format of a file, without any dependency on the filename.
+Documents saved with a F<.mht> extension will not directly reopen in
+MsWord : when clicking on such documents, Windows chooses Internet
+Explorer as the default display program.  However, these documents can
+be simply renamed with a F<.doc> extension, and will then open
+directly in MsWord.  By the way, the same can be done with XML or RTF
+documents.  That is to say, MsWord is able to recognize the internal
+format of a file, without any dependency on the filename.  There is
+one unfortunate restriction, however : when the extension is F<.docx>,
+MsWord does not accept any internal format different from OOXML. So one has
+to either stick with the F<.doc> extension, or choose a specific extension
+like F<.mswhtml> and then associate this extension to the MsWord program :
+to do so, type the following command in a windows console
+
+  assoc .mswhtml=Word.Document.12 # for Office 2010, or .8 for Office 2003
+
 
 =head2 Features of the module
 
@@ -522,7 +532,7 @@ read and produce such ODF files, but this is not fully satisfactory
 because in that mode many MsWord features are disabled or restricted.
 
 The XML format used by MsWord is called "OOXML"; to
-my knowledge, there is no CPAN module providing an API to 
+my knowledge, there is no CPAN module providing an API to
 this format.
 
 
@@ -718,11 +728,14 @@ as a left (right) page.
 
 =head2 save_as
 
-  $doc->save_as("/path/to/some/file");
+  my $filename = $doc->save_as("/path/to/some/file");
 
 Generates the MIME document and saves it at the given location.
 If no extension is present, file extension F<.doc> will be added
-by default to the filename.
+by default to the filename; this is returned as the result from the method
+call.
+
+
 
 
 =head2 content
@@ -755,7 +768,8 @@ omitted, it defaults to 1.
 
 =head2 field
 
-  my $html = $doc->field($fieldname, $args, $content);
+  my $html = $doc->field($fieldname, $args, $content,
+                         $prevent_html_entity_encoding);
 
 Returns HTML markup for a MsWord field.
 
@@ -769,6 +783,11 @@ the field content when opening the document; users will have
 to explicitly request to update all fields, by selecting the whole
 document and then hitting the F9 key).
 
+Optional C<$prevent_html_entity_encoding> is a boolean
+that prevents the automatic translation of C<< < >>, C<< > >> and 
+C<< & >> characters into HTML entities C<< &lt >>, C<< &gt >> and
+C<< &amp; >>. This is useful if you want to insert some rich text.
+
 Here are some examples :
 
   my $header = sprintf "%s of %s", $doc->field('PAGE'), 
@@ -780,9 +799,12 @@ Here are some examples :
 
 =head2 quote
 
-  my $html = $doc->quote($text);
+  my $html = $doc->quote($text, $prevent_html_entity_encoding);
 
 Shortcut to produce a QUOTE field (see last field example just above).
+
+The optional C<$prevent_html_entity_encoding> argument is explained in the
+L</field> method.
 
 
 =head1 AUTHORING MHT DOCUMENTS

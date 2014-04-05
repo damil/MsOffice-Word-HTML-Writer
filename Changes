@@ -1,12 +1,12 @@
 Revision history for MsOffice-Word-HTML-Writer
 
+1.03 05.04.2013
+  - new argument 'prevent_html_encoding' for the quote() method
+  - save_as() method returns the generated filename
+
 1.02 23.11.2013
   - #90737 : new 'page_numbers' arg for create_section(new_page=>)
   - avoid warnings when the MIME type is unknown
-
-1.01 29.09.2011
-  - new 'left'/'right' args for page_break() and create_section(new_page=>)
-
 
 1.01 29.09.2011
   - new 'left'/'right' args for page_break() and create_section(new_page=>)
