@@ -43,4 +43,4 @@ like($content, qr/$utf8_word/, 'UTF8 support');
 
 done_testing;
 
-$doc->save_as("01_word_document.doc");
+# $doc->save_as("01_word_document.doc");

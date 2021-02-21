@@ -10,7 +10,7 @@ use Carp;
 use Params::Validate  qw/validate SCALAR HASHREF/;
 use Scalar::Util      qw/looks_like_number/;
 
-our $VERSION = '1.04';
+our $VERSION = '1.05';
 
 sub new {
   my $class = shift;
