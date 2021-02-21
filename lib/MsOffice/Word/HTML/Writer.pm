@@ -8,6 +8,7 @@ use MIME::Types;
 use Encode            qw/encode_utf8/;
 use Carp;
 use Params::Validate  qw/validate SCALAR HASHREF/;
+use Scalar::Util      qw/looks_like_number/;
 
 our $VERSION = '1.04';
 
@@ -222,8 +223,8 @@ sub _main {
     if ($i > 1) {
       # type of break
       my $break = $section->{new_page};
-      $break = 'always' if $break && $break !~ /\w/; # if true but not a word
-      $break ||= 'auto';                             # if false
+      $break = 'always' if $break && looks_like_number($break); # if true but not a word
+      $break ||= 'auto';                                        # if false
       # otherwise, type of break will just be the word given in {new_page}
 
       # insert into body
@@ -435,7 +436,7 @@ MsOffice::Word::HTML::Writer - Writing documents for MsWord in HTML format
                                   $doc->field('NUMPAGES')),
     footer => sprintf("printed at %s", 
                                   $doc->field('PRINTDATE')),
-    new_page => 1, # or 'left', or 'right'
+    new_page => 1, # or 'always', or 'left', or 'right'
   );
   $doc->write("this is the second section, look at header/footer");
   
