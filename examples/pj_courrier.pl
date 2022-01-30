@@ -80,7 +80,7 @@ __END_FOOTER__
 
 my $doc = MsOffice::Word::HTML::Writer->new(
   title     => "My new doc",
-  hf_styles => $hf_styles,
+  # hf_styles => $hf_styles,
  );
 
 
