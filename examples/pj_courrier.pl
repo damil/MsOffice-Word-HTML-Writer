@@ -85,7 +85,7 @@ my $doc = MsOffice::Word::HTML::Writer->new(
 
 
 
-$doc->new_section(
+$doc->create_section(
   footer    => $footer,
 );
 
