@@ -1,3 +1,4 @@
+use utf8;
 use strict;
 use warnings;
 use lib "../lib";
@@ -93,6 +94,7 @@ $doc->create_section(
 $doc->write(<<"");
    <P>HELLO, WORLD</P>
    <P>THIS IS A GENERATED DOC</P>
+   <p>il était une bergère</p>
 
 $doc->save_as('pj.doc');
 
