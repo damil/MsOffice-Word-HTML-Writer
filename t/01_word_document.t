@@ -37,4 +37,4 @@ like $content, qr/\bbergère\b/,                                    "bergère";
 
 done_testing;
 
-$doc->save_as("01_word_document.doc") if @ARGV;
+$doc->save_as("01_word_document.doc");
